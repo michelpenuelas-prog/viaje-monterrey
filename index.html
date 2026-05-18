@@ -1,0 +1,2121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monterrey · Planeador de Viaje</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════
+   VARIABLES & RESET
+══════════════════════════════════ */
+:root {
+  --ink:        #12100e;
+  --cream:      #f7f0e6;
+  --sand:       #e2d0b8;
+  --warm-white: #fdf8f2;
+  --terracotta: #c4603a;
+  --terra-lt:   #e8855e;
+  --sienna:     #8b3a1e;
+  --gold:       #d4a843;
+  --gold-lt:    #f0c96a;
+  --sage:       #617a55;
+  --sky:        #4a7fa0;
+  --stone:      #9e9488;
+  --ok:         #4caf7d;
+  --pend:       #e07b39;
+  --danger:     #c4603a;
+
+  --radius:     14px;
+  --shadow-sm:  0 2px 12px rgba(18,16,14,.07);
+  --shadow-md:  0 6px 28px rgba(18,16,14,.12);
+  --shadow-lg:  0 16px 48px rgba(18,16,14,.18);
+
+  --trans: .22s cubic-bezier(.4,0,.2,1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ══════════════════════════════════
+   TOAST
+══════════════════════════════════ */
+#toast {
+  position: fixed; bottom: 2rem; right: 2rem; z-index: 9999;
+  background: var(--ink); color: var(--cream);
+  padding: .8rem 1.4rem; border-radius: 10px;
+  font-size: .85rem; font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(120%); opacity: 0;
+  transition: all .4s cubic-bezier(.34,1.56,.64,1);
+  max-width: 300px;
+}
+#toast.show { transform: translateY(0); opacity: 1; }
+#toast.success { border-left: 3px solid var(--ok); }
+#toast.error   { border-left: 3px solid var(--danger); }
+#toast.info    { border-left: 3px solid var(--gold); }
+
+/* ══════════════════════════════════
+   HERO
+══════════════════════════════════ */
+.hero {
+  position: relative;
+  height: 100vh; min-height: 580px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  overflow: hidden; background: var(--ink);
+}
+
+.hero-bg {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 100%, #3a1f0a 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 15% 15%, #1e2e1a 0%, transparent 60%),
+    linear-gradient(155deg, #0d0b08 0%, #1a1208 50%, #251508 100%);
+}
+
+.mountain-svg {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  width: 100%; height: 58%; pointer-events: none;
+}
+
+.hero-content {
+  position: relative; z-index: 2;
+  text-align: center; padding: 2rem;
+}
+
+.hero-eyebrow {
+  font-size: .7rem; font-weight: 600;
+  letter-spacing: .4em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 1.2rem;
+  animation: fadeUp .8s .3s both;
+}
+
+.hero-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(3.5rem, 11vw, 7.5rem);
+  font-weight: 900; line-height: .88;
+  color: var(--cream); letter-spacing: -.02em;
+  animation: fadeUp .9s .5s both;
+}
+.hero-title em { font-style: italic; color: var(--terracotta); }
+
+.hero-sub {
+  margin-top: 1.6rem; font-size: 1rem;
+  color: var(--sand); letter-spacing: .06em;
+  animation: fadeUp .9s .7s both;
+}
+
+/* editable hero fields */
+.hero-editable {
+  background: transparent;
+  border: none; border-bottom: 1px dashed rgba(255,255,255,.25);
+  color: inherit; font: inherit;
+  outline: none; text-align: center;
+  padding: 2px 6px; transition: border-color var(--trans);
+  cursor: text;
+}
+.hero-editable:focus { border-bottom-color: var(--gold); }
+
+.hero-actions {
+  margin-top: 2rem; display: flex; gap: 1rem; justify-content: center;
+  animation: fadeUp .9s .9s both;
+}
+
+.btn {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: .75rem 1.6rem; border-radius: 50px;
+  font-family: 'Outfit', sans-serif; font-size: .85rem;
+  font-weight: 600; cursor: pointer; border: none;
+  transition: all var(--trans); text-decoration: none;
+}
+.btn-primary {
+  background: var(--terracotta); color: #fff;
+}
+.btn-primary:hover { background: var(--terra-lt); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+.btn-ghost {
+  background: rgba(255,255,255,.08); color: var(--cream);
+  border: 1px solid rgba(255,255,255,.15);
+}
+.btn-ghost:hover { background: rgba(255,255,255,.15); transform: translateY(-2px); }
+
+.hero-scroll {
+  position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+  color: var(--stone); font-size: .65rem; letter-spacing: .22em;
+  text-transform: uppercase; display: flex; flex-direction: column;
+  align-items: center; gap: .5rem;
+  animation: fadeUp .8s 1.3s both;
+}
+.scroll-line { width: 1px; height: 36px; background: linear-gradient(to bottom, var(--gold), transparent); animation: pulse 2s infinite; }
+
+/* ══════════════════════════════════
+   SUMMARY STRIP
+══════════════════════════════════ */
+.summary-strip {
+  background: var(--ink);
+  display: flex; flex-wrap: wrap; justify-content: center;
+}
+
+.s-card {
+  flex: 1; min-width: 140px; max-width: 200px;
+  padding: 1.8rem 1.2rem; text-align: center;
+  border-right: 1px solid rgba(255,255,255,.07);
+}
+.s-card:last-child { border-right: none; }
+
+.s-icon  { font-size: 1.6rem; margin-bottom: .6rem; }
+.s-label { font-size: .6rem; letter-spacing: .25em; text-transform: uppercase; color: var(--stone); margin-bottom: .3rem; }
+.s-value { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; color: var(--cream); }
+.s-value.gold { color: var(--gold); }
+.s-value.ok   { color: var(--ok); }
+.s-value.pend { color: var(--pend); }
+
+/* ══════════════════════════════════
+   LAYOUT SHELL
+══════════════════════════════════ */
+.container { max-width: 960px; margin: 0 auto; padding: 0 1.4rem; }
+
+.page-section { padding: 3.5rem 0 0; }
+
+.sec-label {
+  font-size: .62rem; font-weight: 600;
+  letter-spacing: .3em; text-transform: uppercase;
+  color: var(--terracotta); margin-bottom: .5rem;
+}
+.sec-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem; font-weight: 700; line-height: 1.1;
+  margin-bottom: 1.8rem;
+}
+
+/* ══════════════════════════════════
+   CARD BASE
+══════════════════════════════════ */
+.card {
+  background: var(--warm-white);
+  border: 1px solid var(--sand);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--trans);
+}
+.card:hover { box-shadow: var(--shadow-md); }
+
+/* ══════════════════════════════════
+   TRIP CONFIG
+══════════════════════════════════ */
+.trip-config-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem; margin-bottom: 2rem;
+}
+
+.config-field { display: flex; flex-direction: column; gap: .4rem; }
+.config-label { font-size: .7rem; font-weight: 600; letter-spacing: .15em; text-transform: uppercase; color: var(--stone); }
+.config-input {
+  background: var(--warm-white); border: 1.5px solid var(--sand);
+  border-radius: 9px; padding: .65rem .9rem;
+  font-family: 'Outfit', sans-serif; font-size: .95rem;
+  color: var(--ink); outline: none;
+  transition: border-color var(--trans), box-shadow var(--trans);
+}
+.config-input:focus { border-color: var(--terracotta); box-shadow: 0 0 0 3px rgba(196,96,58,.1); }
+
+/* ══════════════════════════════════
+   FLIGHT CARDS
+══════════════════════════════════ */
+.flights-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+@media(max-width:580px) { .flights-grid { grid-template-columns: 1fr; } }
+
+.flight-card {
+  background: var(--ink); border-radius: var(--radius);
+  padding: 1.6rem; position: relative; overflow: hidden;
+  transition: transform var(--trans);
+}
+.flight-card:hover { transform: translateY(-3px); }
+.flight-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--terracotta), var(--gold));
+}
+
+.flight-route { display: flex; align-items: center; gap: .8rem; margin-bottom: 1.2rem; }
+.flight-city { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 700; color: var(--cream); }
+.flight-arrow { color: var(--gold); font-size: 1.4rem; }
+
+.flight-fields { display: flex; flex-direction: column; gap: .6rem; }
+.f-row { display: flex; align-items: center; gap: .6rem; }
+.f-lbl { font-size: .6rem; color: var(--stone); letter-spacing: .15em; text-transform: uppercase; min-width: 60px; }
+
+.dark-input {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 7px; padding: .4rem .7rem;
+  color: var(--cream); font-family: 'Outfit', sans-serif; font-size: .85rem;
+  outline: none; flex: 1;
+  transition: border-color var(--trans), background var(--trans);
+}
+.dark-input:focus { border-color: var(--gold); background: rgba(255,255,255,.1); }
+
+.dark-select {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 7px; padding: .4rem .7rem;
+  color: var(--cream); font-family: 'Outfit', sans-serif; font-size: .8rem;
+  outline: none; cursor: pointer;
+  transition: border-color var(--trans);
+}
+.dark-select:focus { border-color: var(--gold); }
+.dark-select option { background: var(--ink); }
+
+.price-row {
+  display: flex; justify-content: space-between;
+  align-items: flex-end; margin-top: 1rem;
+  padding-top: 1rem; border-top: 1px solid rgba(255,255,255,.08);
+}
+
+.price-wrap { display: flex; align-items: baseline; gap: .3rem; }
+.price-symbol { font-size: .9rem; color: var(--gold); font-weight: 600; }
+.price-number-input {
+  font-family: 'Playfair Display', serif; font-size: 1.9rem; font-weight: 700;
+  color: var(--gold); background: transparent; border: none;
+  border-bottom: 1px dashed rgba(212,168,67,.35); outline: none;
+  width: 130px; text-align: left;
+  transition: border-color var(--trans);
+}
+.price-number-input:focus { border-bottom-color: var(--gold); }
+
+.status-pill {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .3rem .8rem; border-radius: 50px;
+  font-size: .72rem; font-weight: 600; cursor: pointer; border: none;
+  transition: all var(--trans); user-select: none;
+}
+.status-pill.pagado   { background: rgba(76,175,125,.15); color: var(--ok); border: 1px solid rgba(76,175,125,.3); }
+.status-pill.pendiente{ background: rgba(224,123,57,.15); color: var(--pend); border: 1px solid rgba(224,123,57,.3); }
+
+/* ══════════════════════════════════
+   DAY CARDS
+══════════════════════════════════ */
+.days-wrapper { display: flex; flex-direction: column; gap: 1.4rem; }
+
+.day-card { border-radius: var(--radius); overflow: hidden; }
+
+.day-header {
+  display: grid; grid-template-columns: 56px 1fr auto;
+  align-items: center; gap: 1rem;
+  padding: 1.2rem 1.4rem;
+  background: var(--ink); cursor: pointer; user-select: none;
+}
+
+.day-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.8rem; font-weight: 900;
+  color: var(--terracotta); line-height: 1; text-align: center;
+}
+
+.day-hdr-info { overflow: hidden; }
+.day-hdr-date-input {
+  font-size: .65rem; color: var(--stone); letter-spacing: .15em;
+  background: transparent; border: none;
+  border-bottom: 1px dashed rgba(255,255,255,.12); outline: none;
+  width: 100%; color: var(--stone); margin-bottom: .25rem;
+  font-family: 'Outfit', sans-serif;
+}
+.day-hdr-date-input:focus { border-bottom-color: var(--gold); }
+
+.day-title-input {
+  font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700;
+  color: var(--cream); background: transparent; border: none;
+  border-bottom: 1px dashed rgba(255,255,255,.18); outline: none;
+  width: 100%; padding: 0;
+}
+.day-title-input:focus { border-bottom-color: var(--gold); }
+.day-title-input::placeholder { color: var(--stone); }
+
+.day-hdr-right { display: flex; align-items: center; gap: .8rem; }
+.day-toggle { color: var(--stone); font-size: 1rem; transition: transform .3s; }
+.day-card.open .day-toggle { transform: rotate(180deg); }
+
+.day-body {
+  display: none;
+  background: var(--warm-white);
+  border: 1px solid var(--sand); border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  padding: 1.4rem;
+}
+.day-card.open .day-body { display: block; }
+
+/* ── activities ── */
+.activities-list { display: flex; flex-direction: column; gap: .8rem; margin-bottom: 1rem; }
+
+.activity-item {
+  border: 1px solid var(--sand); border-radius: 11px;
+  background: #fff; overflow: hidden;
+  transition: box-shadow var(--trans);
+}
+.activity-item:hover { box-shadow: var(--shadow-sm); }
+
+.act-header {
+  display: flex; align-items: center; gap: .7rem;
+  padding: .8rem 1rem; cursor: pointer;
+}
+
+.act-emoji { font-size: 1.2rem; min-width: 1.5rem; text-align: center; }
+
+.act-name-input {
+  flex: 1; font-weight: 600; font-size: .9rem;
+  background: transparent; border: none; outline: none;
+  color: var(--ink); font-family: 'Outfit', sans-serif;
+}
+.act-name-input::placeholder { color: var(--stone); }
+
+.act-quick-price {
+  font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 700;
+  color: var(--sage); white-space: nowrap;
+}
+
+.act-chevron { color: var(--stone); font-size: .8rem; transition: transform .3s; }
+.activity-item.open .act-chevron { transform: rotate(180deg); }
+
+.act-detail {
+  display: none;
+  padding: 0 1rem 1rem;
+  border-top: 1px solid var(--sand);
+  margin-top: .4rem; padding-top: 1rem;
+}
+.activity-item.open .act-detail { display: block; }
+
+.act-detail-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; margin-bottom: .8rem;
+}
+@media(max-width:500px) { .act-detail-grid { grid-template-columns: 1fr; } }
+
+.act-field { display: flex; flex-direction: column; gap: .3rem; }
+.act-field-label { font-size: .6rem; font-weight: 600; letter-spacing: .15em; text-transform: uppercase; color: var(--stone); }
+
+.act-input {
+  background: var(--cream); border: 1.5px solid var(--sand);
+  border-radius: 8px; padding: .5rem .7rem;
+  font-family: 'Outfit', sans-serif; font-size: .85rem;
+  color: var(--ink); outline: none;
+  transition: border-color var(--trans);
+}
+.act-input:focus { border-color: var(--terracotta); }
+
+.act-desc-input {
+  width: 100%; background: var(--cream); border: 1.5px solid var(--sand);
+  border-radius: 8px; padding: .5rem .7rem;
+  font-family: 'Outfit', sans-serif; font-size: .85rem;
+  color: var(--ink); outline: none; resize: vertical; min-height: 60px;
+  transition: border-color var(--trans); line-height: 1.6;
+}
+.act-desc-input:focus { border-color: var(--terracotta); }
+
+.act-bottom-row {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: .6rem; margin-top: .8rem;
+}
+
+.price-per-toggle {
+  display: flex; background: var(--cream); border-radius: 8px;
+  border: 1.5px solid var(--sand); overflow: hidden;
+}
+.price-per-btn {
+  padding: .35rem .75rem; font-size: .72rem; font-weight: 600;
+  background: transparent; border: none; cursor: pointer; color: var(--stone);
+  transition: all var(--trans);
+}
+.price-per-btn.active { background: var(--terracotta); color: #fff; }
+
+/* search tariff */
+.tariff-search-wrap { margin-top: .6rem; }
+.tariff-search-row { display: flex; gap: .5rem; }
+.tariff-btn {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .45rem 1rem; border-radius: 8px;
+  font-size: .78rem; font-weight: 600; cursor: pointer; border: none;
+  background: var(--sky); color: #fff; transition: all var(--trans);
+  white-space: nowrap;
+}
+.tariff-btn:hover { background: #3a6f8f; }
+.tariff-result {
+  margin-top: .5rem; font-size: .8rem; color: var(--sage);
+  background: rgba(97,122,85,.08); border: 1px solid rgba(97,122,85,.2);
+  border-radius: 8px; padding: .5rem .8rem; display: none; line-height: 1.5;
+}
+.tariff-result.show { display: block; }
+
+.act-footer-row {
+  display: flex; justify-content: flex-end; gap: .6rem; margin-top: .8rem;
+}
+
+.del-btn {
+  background: none; border: 1px solid rgba(196,96,58,.25); color: var(--terracotta);
+  border-radius: 7px; padding: .35rem .8rem; font-size: .75rem; font-weight: 600;
+  cursor: pointer; transition: all var(--trans);
+}
+.del-btn:hover { background: var(--terracotta); color: #fff; }
+
+/* add activity */
+.add-act-btn {
+  width: 100%; border: 1.5px dashed var(--sand); background: transparent;
+  color: var(--stone); border-radius: 10px; padding: .75rem;
+  font-family: 'Outfit', sans-serif; font-size: .85rem; cursor: pointer;
+  transition: all var(--trans);
+}
+.add-act-btn:hover { border-color: var(--terracotta); color: var(--terracotta); }
+
+/* day total */
+.day-total-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 1.2rem; padding-top: 1rem;
+  border-top: 1px solid var(--sand);
+}
+.day-total-label { font-size: .7rem; font-weight: 600; letter-spacing: .15em; text-transform: uppercase; color: var(--stone); }
+.day-total-amount { font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 700; color: var(--terracotta); }
+
+/* ══════════════════════════════════
+   TRANSPORT
+══════════════════════════════════ */
+.transport-list { display: flex; flex-direction: column; gap: .8rem; }
+
+.transport-item {
+  border: 1px solid var(--sand); border-radius: 11px;
+  background: #fff; padding: 1rem 1.2rem;
+}
+
+.transport-header { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: .8rem; margin-bottom: .8rem; }
+.transport-icon { font-size: 1.4rem; }
+.transport-label-input {
+  font-weight: 600; font-size: .9rem; background: transparent;
+  border: none; border-bottom: 1px dashed var(--sand); outline: none;
+  color: var(--ink); font-family: 'Outfit', sans-serif; width: 100%;
+}
+.transport-label-input:focus { border-bottom-color: var(--terracotta); }
+
+.transport-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .7rem;
+}
+@media(max-width:500px) { .transport-grid { grid-template-columns: 1fr 1fr; } }
+
+.transport-field { display: flex; flex-direction: column; gap: .3rem; }
+.transport-field-label { font-size: .6rem; font-weight: 600; letter-spacing: .15em; text-transform: uppercase; color: var(--stone); }
+
+.t-input {
+  background: var(--cream); border: 1.5px solid var(--sand);
+  border-radius: 8px; padding: .45rem .65rem;
+  font-family: 'Outfit', sans-serif; font-size: .82rem;
+  color: var(--ink); outline: none;
+  transition: border-color var(--trans);
+}
+.t-input:focus { border-color: var(--sky); }
+
+.map-link {
+  display: inline-flex; align-items: center; gap: .3rem;
+  margin-top: .6rem; font-size: .75rem; color: var(--sky);
+  text-decoration: none; font-weight: 600;
+  transition: color var(--trans);
+}
+.map-link:hover { color: #3a6f8f; }
+
+.add-transport-btn {
+  width: 100%; border: 1.5px dashed var(--sand); background: transparent;
+  color: var(--stone); border-radius: 10px; padding: .75rem;
+  font-family: 'Outfit', sans-serif; font-size: .85rem; cursor: pointer;
+  transition: all var(--trans); margin-top: .8rem;
+}
+.add-transport-btn:hover { border-color: var(--sky); color: var(--sky); }
+
+/* ══════════════════════════════════
+   CHECKLISTS
+══════════════════════════════════ */
+.lists-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+@media(max-width:600px) { .lists-grid { grid-template-columns: 1fr; } }
+
+.checklist-card { padding: 1.4rem; }
+
+.checklist-title-row {
+  display: flex; align-items: center; gap: .6rem; margin-bottom: 1rem;
+}
+.checklist-icon { font-size: 1.4rem; }
+.checklist-heading { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; }
+
+.check-items { display: flex; flex-direction: column; gap: .5rem; margin-bottom: .8rem; }
+
+.check-item {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .45rem .6rem; border-radius: 8px;
+  transition: background var(--trans);
+}
+.check-item:hover { background: var(--cream); }
+
+.check-item input[type="checkbox"] {
+  width: 16px; height: 16px; accent-color: var(--terracotta);
+  cursor: pointer; flex-shrink: 0;
+}
+
+.check-text {
+  flex: 1; font-size: .88rem; background: transparent; border: none;
+  outline: none; color: var(--ink); font-family: 'Outfit', sans-serif;
+}
+.check-text.done { text-decoration: line-through; color: var(--stone); }
+
+.check-del {
+  background: none; border: none; color: #ccc; cursor: pointer;
+  font-size: .85rem; padding: .1rem .3rem; border-radius: 4px;
+  transition: color var(--trans);
+}
+.check-del:hover { color: var(--danger); }
+
+.add-check-btn {
+  width: 100%; border: 1.5px dashed var(--sand); background: transparent;
+  color: var(--stone); border-radius: 8px; padding: .55rem;
+  font-family: 'Outfit', sans-serif; font-size: .82rem; cursor: pointer;
+  transition: all var(--trans);
+}
+.add-check-btn:hover { border-color: var(--terracotta); color: var(--terracotta); }
+
+/* ══════════════════════════════════
+   CUSTOM SECTIONS
+══════════════════════════════════ */
+.custom-sections-wrapper { display: flex; flex-direction: column; gap: 1.4rem; }
+
+.custom-section-card { padding: 1.4rem; }
+
+.custom-section-header {
+  display: flex; align-items: center; gap: .8rem; margin-bottom: 1rem;
+}
+.custom-section-title-input {
+  flex: 1; font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700;
+  background: transparent; border: none;
+  border-bottom: 1.5px dashed var(--sand); outline: none;
+  color: var(--ink); padding: 0 0 .2rem;
+  transition: border-color var(--trans);
+}
+.custom-section-title-input:focus { border-bottom-color: var(--terracotta); }
+
+.del-section-btn {
+  background: none; border: 1px solid rgba(196,96,58,.25);
+  color: var(--terracotta); border-radius: 7px;
+  padding: .3rem .7rem; font-size: .75rem; font-weight: 600;
+  cursor: pointer; transition: all var(--trans);
+}
+.del-section-btn:hover { background: var(--terracotta); color: #fff; }
+
+.custom-section-textarea {
+  width: 100%; min-height: 100px;
+  background: var(--cream); border: 1.5px solid var(--sand);
+  border-radius: 10px; padding: .8rem 1rem;
+  font-family: 'Outfit', sans-serif; font-size: .88rem;
+  color: var(--ink); outline: none; resize: vertical; line-height: 1.7;
+  transition: border-color var(--trans);
+}
+.custom-section-textarea:focus { border-color: var(--terracotta); }
+
+.add-section-btn {
+  display: flex; align-items: center; justify-content: center; gap: .5rem;
+  width: 100%; border: 2px dashed var(--sand); background: transparent;
+  color: var(--stone); border-radius: var(--radius); padding: 1rem;
+  font-family: 'Outfit', sans-serif; font-size: .88rem; cursor: pointer;
+  transition: all var(--trans); margin-top: .5rem;
+}
+.add-section-btn:hover { border-color: var(--terracotta); color: var(--terracotta); }
+
+/* ══════════════════════════════════
+   NOTES
+══════════════════════════════════ */
+.notes-textarea {
+  width: 100%; min-height: 130px;
+  background: var(--warm-white); border: 1.5px solid var(--sand);
+  border-radius: 12px; padding: 1rem 1.2rem;
+  font-family: 'Outfit', sans-serif; font-size: .9rem;
+  color: var(--ink); outline: none; resize: vertical; line-height: 1.7;
+  transition: border-color var(--trans);
+}
+.notes-textarea:focus { border-color: var(--terracotta); }
+
+/* ══════════════════════════════════
+   BUDGET SUMMARY
+══════════════════════════════════ */
+.budget-section {
+  background: var(--ink); padding: 4rem 1.4rem; margin-top: 3.5rem;
+}
+
+.budget-inner { max-width: 960px; margin: 0 auto; }
+
+.budget-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+@media(max-width:650px) { .budget-cols { grid-template-columns: 1fr; } }
+
+.budget-col-title {
+  font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 700;
+  margin-bottom: 1rem; padding-bottom: .6rem;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.budget-col-title.ok   { color: var(--ok); }
+.budget-col-title.pend { color: var(--pend); }
+
+.budget-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: .6rem .9rem; border-radius: 8px; margin-bottom: .4rem;
+  background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.05);
+  font-size: .82rem;
+}
+.budget-row-lbl { color: var(--sand); }
+.budget-row-amt { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 700; color: var(--cream); }
+
+.budget-grand {
+  margin-top: 2rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+}
+@media(max-width:650px) { .budget-grand { grid-template-columns: 1fr; } }
+
+.grand-card {
+  padding: 1.4rem 1.6rem; border-radius: 12px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.grand-card.ok   { background: rgba(76,175,125,.08); border: 1px solid rgba(76,175,125,.2); }
+.grand-card.pend { background: rgba(224,123,57,.08);  border: 1px solid rgba(224,123,57,.2); }
+.grand-card.total{ background: rgba(212,168,67,.08);  border: 1px solid rgba(212,168,67,.2); grid-column: 1 / -1; }
+
+.grand-lbl { font-size: .7rem; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; }
+.grand-lbl.ok   { color: var(--ok); }
+.grand-lbl.pend { color: var(--pend); }
+.grand-lbl.total{ color: var(--gold); }
+
+.grand-amt { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; }
+.grand-amt.ok   { color: var(--ok); }
+.grand-amt.pend { color: var(--pend); }
+.grand-amt.total{ color: var(--gold); }
+
+/* ══════════════════════════════════
+   SAVE BAR
+══════════════════════════════════ */
+.save-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--ink); padding: .9rem 2rem;
+  display: flex; justify-content: center; align-items: center; gap: 1rem;
+  border-top: 1px solid rgba(255,255,255,.08);
+  z-index: 100; box-shadow: 0 -4px 24px rgba(0,0,0,.3);
+}
+
+.save-status { font-size: .78rem; color: var(--stone); }
+
+.save-btn {
+  background: var(--terracotta); color: #fff;
+  border: none; border-radius: 50px;
+  padding: .65rem 1.8rem; font-family: 'Outfit', sans-serif;
+  font-size: .85rem; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; gap: .5rem;
+  transition: all var(--trans);
+}
+.save-btn:hover { background: var(--terra-lt); transform: translateY(-1px); }
+.save-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+/* ══════════════════════════════════
+   ADD DAY / FOOTER
+══════════════════════════════════ */
+.add-day-btn {
+  width: 100%; border: 2px dashed var(--sand); background: transparent;
+  color: var(--stone); border-radius: var(--radius); padding: 1rem;
+  font-family: 'Outfit', sans-serif; font-size: .88rem; cursor: pointer;
+  transition: all var(--trans); margin-top: .8rem;
+}
+.add-day-btn:hover { border-color: var(--terracotta); color: var(--terracotta); }
+
+footer {
+  background: var(--ink); text-align: center;
+  padding: 2rem 1rem 5rem;
+  color: var(--stone); font-size: .72rem; letter-spacing: .12em;
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+
+/* ══════════════════════════════════
+   SPINNER
+══════════════════════════════════ */
+.spinner {
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  display: none;
+}
+.spinner.show { display: inline-block; }
+
+/* ══════════════════════════════════
+   COUNTDOWN
+══════════════════════════════════ */
+.countdown-bar {
+  position: absolute; bottom: 5rem; left: 50%; transform: translateX(-50%);
+  z-index: 3; display: flex; gap: 1.2rem;
+  animation: fadeUp .8s 1s both;
+}
+.cd-block {
+  text-align: center; min-width: 56px;
+}
+.cd-num {
+  font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900;
+  color: var(--cream); line-height: 1;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px; padding: .4rem .7rem;
+  backdrop-filter: blur(6px);
+}
+.cd-lbl {
+  font-size: .55rem; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--stone); margin-top: .4rem;
+}
+.cd-sep {
+  font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900;
+  color: var(--gold); opacity: .5; align-self: flex-start; padding-top: .4rem;
+}
+
+/* ══════════════════════════════════
+   WEATHER
+══════════════════════════════════ */
+.weather-widget {
+  background: var(--ink); padding: 2rem 1.4rem;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.weather-inner {
+  max-width: 960px; margin: 0 auto;
+  display: grid; grid-template-columns: auto 1fr; gap: 2rem; align-items: center;
+}
+.weather-main { display: flex; align-items: center; gap: 1.2rem; }
+.weather-icon { font-size: 3.5rem; line-height: 1; }
+.weather-temp {
+  font-family: 'Playfair Display', serif; font-size: 3rem; font-weight: 900;
+  color: var(--cream); line-height: 1;
+}
+.weather-desc { font-size: .85rem; color: var(--stone); margin-top: .2rem; text-transform: capitalize; }
+.weather-city { font-size: .65rem; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); margin-bottom: .3rem; }
+.weather-details {
+  display: flex; gap: 1.5rem; flex-wrap: wrap;
+}
+.weather-detail { text-align: center; }
+.weather-detail-val { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; color: var(--cream); }
+.weather-detail-lbl { font-size: .6rem; letter-spacing: .15em; text-transform: uppercase; color: var(--stone); margin-top: .2rem; }
+.weather-loading { color: var(--stone); font-size: .85rem; }
+
+/* ══════════════════════════════════
+   MAP
+══════════════════════════════════ */
+.map-container {
+  border-radius: var(--radius); overflow: hidden;
+  border: 1px solid var(--sand); box-shadow: var(--shadow-sm);
+  background: var(--warm-white);
+}
+.map-frame { width: 100%; height: 420px; border: none; display: block; }
+.map-pins-list {
+  padding: 1rem 1.2rem; display: flex; flex-wrap: wrap; gap: .6rem;
+  border-top: 1px solid var(--sand);
+}
+.map-pin-tag {
+  display: inline-flex; align-items: center; gap: .4rem;
+  background: var(--cream); border: 1px solid var(--sand);
+  border-radius: 50px; padding: .3rem .8rem;
+  font-size: .78rem; font-weight: 500; color: var(--ink);
+}
+
+/* ══════════════════════════════════
+   CHART
+══════════════════════════════════ */
+.chart-wrap {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center;
+}
+@media(max-width:600px) { .chart-wrap { grid-template-columns: 1fr; } }
+
+.chart-canvas-wrap {
+  position: relative; max-width: 280px; margin: 0 auto;
+}
+#expense-chart { width: 100% !important; height: auto !important; }
+
+.chart-legend { display: flex; flex-direction: column; gap: .7rem; }
+.legend-item {
+  display: flex; align-items: center; gap: .8rem;
+  padding: .6rem .9rem; border-radius: 9px;
+  background: var(--warm-white); border: 1px solid var(--sand);
+}
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.legend-label { flex: 1; font-size: .85rem; font-weight: 500; }
+.legend-amount { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 700; color: var(--ink); }
+.legend-pct { font-size: .72rem; color: var(--stone); margin-left: .3rem; }
+
+/* ══════════════════════════════════
+   ANIMATIONS
+══════════════════════════════════ */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse {
+  0%,100% { opacity: .35; }
+  50%      { opacity: 1; }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ══════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════ */
+@media(max-width:480px) {
+  .day-header { grid-template-columns: 44px 1fr auto; }
+  .day-num { font-size: 2rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════ TOAST ═══════ -->
+<div id="toast"></div>
+
+<!-- ═══════════════════════════
+     HERO
+═══════════════════════════ -->
+<header class="hero">
+  <div class="hero-bg"></div>
+  <svg class="mountain-svg" viewBox="0 0 1440 400" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,400 L0,280 L80,240 L160,200 L260,140 L340,80 L400,120 L440,60 L490,110 L560,160 L620,130 L700,70 L740,100 L780,50 L830,90 L900,140 L960,100 L1010,150 L1080,180 L1160,140 L1260,200 L1360,260 L1440,300 L1440,400 Z" fill="#2a1812" opacity=".85"/>
+    <path d="M0,400 L0,330 L120,300 L250,270 L380,240 L500,260 L600,230 L700,200 L800,230 L900,250 L1020,230 L1140,260 L1260,290 L1380,320 L1440,340 L1440,400 Z" fill="#1a1208" opacity=".95"/>
+    <circle cx="200" cy="55" r="1.5" fill="white" opacity=".55"/>
+    <circle cx="470" cy="28" r="1" fill="white" opacity=".45"/>
+    <circle cx="880" cy="18" r="1.5" fill="white" opacity=".65"/>
+    <circle cx="1120" cy="42" r="1" fill="white" opacity=".5"/>
+    <circle cx="1310" cy="28" r="1.5" fill="white" opacity=".55"/>
+    <circle cx="660" cy="22" r="1" fill="white" opacity=".4"/>
+    <circle cx="1200" cy="78" r="18" fill="#d4a843" opacity=".1"/>
+    <circle cx="1200" cy="78" r="11" fill="#d4a843" opacity=".16"/>
+    <circle cx="1200" cy="78" r="6" fill="#e8c76a" opacity=".55"/>
+  </svg>
+
+  <div class="hero-content">
+    <p class="hero-eyebrow">✈ Planeador de Viaje</p>
+    <h1 class="hero-title">Monte<em>rrey</em></h1>
+    <p class="hero-sub">
+      <input class="hero-editable" id="hero-dates" value="Noviembre 2026" style="width:200px;font-size:1rem;color:var(--sand);letter-spacing:.06em;">
+      &nbsp;·&nbsp;
+      <input class="hero-editable" id="hero-tagline" value="Tu aventura en el norte" style="width:220px;font-size:1rem;color:var(--sand);letter-spacing:.06em;">
+    </p>
+    <div class="hero-actions">
+      <button class="btn btn-primary" onclick="saveAll()" style="font-size:.72rem;padding:.5rem 1.1rem;opacity:.7;border-radius:50px;">💾 Guardar</button>
+      <button class="btn btn-ghost" onclick="loadAll()" style="font-size:.72rem;padding:.5rem 1.1rem;opacity:.6;border-radius:50px;">☁️ Cargar</button>
+    </div>
+  </div>
+  <!-- COUNTDOWN -->
+  <div class="countdown-bar" id="countdown-bar">
+    <div class="cd-block"><div class="cd-num" id="cd-days">--</div><div class="cd-lbl">días</div></div>
+    <div class="cd-sep">:</div>
+    <div class="cd-block"><div class="cd-num" id="cd-hours">--</div><div class="cd-lbl">horas</div></div>
+    <div class="cd-sep">:</div>
+    <div class="cd-block"><div class="cd-num" id="cd-mins">--</div><div class="cd-lbl">minutos</div></div>
+  </div>
+
+  <div class="hero-scroll"><div class="scroll-line"></div>Ver itinerario</div>
+</header>
+
+<!-- ═══════════════════════════
+     SUMMARY STRIP
+═══════════════════════════ -->
+<div class="summary-strip">
+  <div class="s-card">
+    <div class="s-icon">👥</div>
+    <div class="s-label">Viajeros</div>
+    <div class="s-value"><input id="pax-input" type="number" min="1" max="20" value="2" style="width:60px;background:transparent;border:none;border-bottom:1px dashed rgba(255,255,255,.2);color:var(--cream);font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:700;text-align:center;outline:none;" oninput="recalc()"></div>
+  </div>
+  <div class="s-card">
+    <div class="s-icon">✅</div>
+    <div class="s-label">Ya pagado</div>
+    <div class="s-value ok" id="sum-paid">$0</div>
+  </div>
+  <div class="s-card">
+    <div class="s-icon">⏳</div>
+    <div class="s-label">Por pagar</div>
+    <div class="s-value pend" id="sum-pend">$0</div>
+  </div>
+  <div class="s-card">
+    <div class="s-icon">💰</div>
+    <div class="s-label">Total viaje</div>
+    <div class="s-value gold" id="sum-total">$0</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════
+     WEATHER
+═══════════════════════════ -->
+<div class="weather-widget" id="weather-widget">
+  <div class="weather-inner">
+    <div class="weather-main">
+      <div class="weather-icon" id="w-icon">⏳</div>
+      <div>
+        <div class="weather-city">Monterrey, N.L. · Clima actual</div>
+        <div class="weather-temp" id="w-temp">--°</div>
+        <div class="weather-desc" id="w-desc">Cargando…</div>
+      </div>
+    </div>
+    <div class="weather-details">
+      <div class="weather-detail">
+        <div class="weather-detail-val" id="w-feels">--°</div>
+        <div class="weather-detail-lbl">Sensación</div>
+      </div>
+      <div class="weather-detail">
+        <div class="weather-detail-val" id="w-humidity">--%</div>
+        <div class="weather-detail-lbl">Humedad</div>
+      </div>
+      <div class="weather-detail">
+        <div class="weather-detail-val" id="w-wind">-- km/h</div>
+        <div class="weather-detail-lbl">Viento</div>
+      </div>
+      <div class="weather-detail">
+        <div class="weather-detail-val" id="w-high">--°</div>
+        <div class="weather-detail-lbl">Máx hoy</div>
+      </div>
+      <div class="weather-detail">
+        <div class="weather-detail-val" id="w-low">--°</div>
+        <div class="weather-detail-lbl">Mín hoy</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════
+     TRIP CONFIG
+═══════════════════════════ -->
+<div class="container page-section">
+  <p class="sec-label">⚙️ Configuración</p>
+  <h2 class="sec-title">Datos del viaje</h2>
+  <div class="trip-config-grid">
+    <div class="config-field">
+      <label class="config-label">Destino</label>
+      <input class="config-input" id="cfg-destino" value="Monterrey, Nuevo León" placeholder="Destino">
+    </div>
+    <div class="config-field">
+      <label class="config-label">Fecha de salida</label>
+      <input class="config-input" id="cfg-salida" type="date">
+    </div>
+    <div class="config-field">
+      <label class="config-label">Fecha de regreso</label>
+      <input class="config-input" id="cfg-regreso" type="date">
+    </div>
+    <div class="config-field">
+      <label class="config-label">Moneda</label>
+      <select class="config-input" id="cfg-moneda">
+        <option value="MXN">MXN — Peso Mexicano</option>
+        <option value="USD">USD — Dólar</option>
+        <option value="EUR">EUR — Euro</option>
+      </select>
+    </div>
+    <div class="config-field">
+      <label class="config-label">Presupuesto meta</label>
+      <input class="config-input" id="cfg-budget" type="number" placeholder="0" oninput="recalc()">
+    </div>
+    <div class="config-field">
+      <label class="config-label">Hotel / Alojamiento</label>
+      <input class="config-input" id="cfg-hotel" placeholder="Nombre del hotel…">
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════
+     FLIGHTS
+═══════════════════════════ -->
+<div class="container page-section">
+  <p class="sec-label">✈ Transportación aérea</p>
+  <h2 class="sec-title">Vuelos</h2>
+  <div class="flights-grid">
+    <!-- IDA -->
+    <div class="flight-card">
+      <div class="flight-route">
+        <div class="flight-city"><input class="dark-input" id="fl-origen" value="CUL" style="width:70px;font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:var(--cream);padding:.2rem .4rem;"></div>
+        <span class="flight-arrow">→</span>
+        <div class="flight-city"><input class="dark-input" id="fl-destino" value="MTY" style="width:70px;font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:var(--cream);padding:.2rem .4rem;"></div>
+      </div>
+      <div class="flight-fields">
+        <div class="f-row"><span class="f-lbl">Fecha</span><input class="dark-input" id="fl-ida-fecha" type="date"></div>
+        <div class="f-row"><span class="f-lbl">Hora</span><input class="dark-input" id="fl-ida-hora" type="time"></div>
+        <div class="f-row"><span class="f-lbl">Aerolínea</span><input class="dark-input" id="fl-ida-aerolinea" placeholder="Aerolínea…"></div>
+        <div class="f-row"><span class="f-lbl">Vuelo #</span><input class="dark-input" id="fl-ida-numero" placeholder="AM-123…"></div>
+        <div class="f-row"><span class="f-lbl">Escala</span><input class="dark-input" id="fl-ida-escala" placeholder="Directo / Ciudad"></div>
+      </div>
+      <div class="price-row">
+        <div>
+          <div style="font-size:.6rem;color:var(--stone);margin-bottom:.3rem;">COSTO / PERSONA</div>
+          <div class="price-wrap">
+            <span class="price-symbol">$</span>
+            <input class="price-number-input" id="fl-ida-precio" type="number" placeholder="0" oninput="recalc()">
+          </div>
+        </div>
+        <button class="status-pill pendiente" id="fl-ida-status" onclick="toggleStatus(this)">⏳ Pendiente</button>
+      </div>
+    </div>
+    <!-- VUELTA -->
+    <div class="flight-card">
+      <div class="flight-route">
+        <div class="flight-city"><input class="dark-input" id="fl-v-origen" value="MTY" style="width:70px;font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:var(--cream);padding:.2rem .4rem;"></div>
+        <span class="flight-arrow">→</span>
+        <div class="flight-city"><input class="dark-input" id="fl-v-destino" value="CUL" style="width:70px;font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:var(--cream);padding:.2rem .4rem;"></div>
+      </div>
+      <div class="flight-fields">
+        <div class="f-row"><span class="f-lbl">Fecha</span><input class="dark-input" id="fl-vuelta-fecha" type="date"></div>
+        <div class="f-row"><span class="f-lbl">Hora</span><input class="dark-input" id="fl-vuelta-hora" type="time"></div>
+        <div class="f-row"><span class="f-lbl">Aerolínea</span><input class="dark-input" id="fl-vuelta-aerolinea" placeholder="Aerolínea…"></div>
+        <div class="f-row"><span class="f-lbl">Vuelo #</span><input class="dark-input" id="fl-vuelta-numero" placeholder="AM-456…"></div>
+        <div class="f-row"><span class="f-lbl">Escala</span><input class="dark-input" id="fl-vuelta-escala" placeholder="Directo / Ciudad"></div>
+      </div>
+      <div class="price-row">
+        <div>
+          <div style="font-size:.6rem;color:var(--stone);margin-bottom:.3rem;">COSTO / PERSONA</div>
+          <div class="price-wrap">
+            <span class="price-symbol">$</span>
+            <input class="price-number-input" id="fl-vuelta-precio" type="number" placeholder="0" oninput="recalc()">
+          </div>
+        </div>
+        <button class="status-pill pendiente" id="fl-vuelta-status" onclick="toggleStatus(this)">⏳ Pendiente</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════
+     ITINERARY DAYS
+═══════════════════════════ -->
+<div class="container page-section">
+  <p class="sec-label">📅 Itinerario</p>
+  <h2 class="sec-title">Día a día</h2>
+  <div class="days-wrapper" id="days-wrapper"></div>
+  <button class="add-day-btn" onclick="addDay()">＋ Agregar día</button>
+</div>
+
+<!-- ═══════════════════════════
+     TRANSPORT
+═══════════════════════════ -->
+<div class="container page-section">
+  <p class="sec-label">🚗 Movilidad</p>
+  <h2 class="sec-title">Transportes</h2>
+  <div class="transport-list" id="transport-list"></div>
+  <button class="add-transport-btn" onclick="addTransport()">＋ Agregar transporte (Uber / Didi / Taxi / Renta)</button>
+</div>
+
+<!-- ═══════════════════════════
+     CHECKLISTS
+═══════════════════════════ -->
+<div class="container page-section">
+  <p class="sec-label">📋 Listas</p>
+  <h2 class="sec-title">Listas del viaje</h2>
+  <div class="lists-grid">
+    <!-- Compras antes del viaje -->
+    <div class="card checklist-card">
+      <div class="checklist-title-row">
+        <span class="checklist-icon">🛍</span>
+        <h3 class="checklist-heading">Compras antes del viaje</h3>
+      </div>
+      <div class="check-items" id="list-compras"></div>
+      <button class="add-check-btn" onclick="addCheckItem('list-compras')">＋ Agregar artículo</button>
+    </div>
+    <!-- Indispensables -->
+    <div class="card checklist-card">
+      <div class="checklist-title-row">
+        <span class="checklist-icon">🎒</span>
+        <h3 class="checklist-heading">Lo indispensable para el viaje</h3>
+      </div>
+      <div class="check-items" id="list-indispensables"></div>
+      <button class="add-check-btn" onclick="addCheckItem('list-indispensables')">＋ Agregar artículo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════
+     NOTES
+═══════════════════════════ -->
+<div class="container page-section">
+  <p class="sec-label">📝 Notas</p>
+  <h2 class="sec-title">Notas y pendientes libres</h2>
+  <textarea class="notes-textarea" id="notes-field" placeholder="Escribe aquí: datos del hotel, contactos de emergencia, tips de amigos, pendientes antes del viaje…"></textarea>
+</div>
+
+<!-- ═══════════════════════════
+     CUSTOM SECTIONS
+═══════════════════════════ -->
+<div class="container page-section" style="padding-bottom:3.5rem;">
+  <p class="sec-label">➕ Secciones extra</p>
+  <h2 class="sec-title">Agrega tu propia sección</h2>
+  <div class="custom-sections-wrapper" id="custom-sections"></div>
+  <button class="add-section-btn" onclick="addCustomSection()">＋ Agregar nueva sección</button>
+</div>
+
+<!-- ═══════════════════════════
+     MAP
+═══════════════════════════ -->
+<div class="container page-section">
+  <p class="sec-label">🗺 Mapa del viaje</p>
+  <h2 class="sec-title">Actividades en el mapa</h2>
+  <div class="map-container">
+    <iframe class="map-frame" id="map-frame"
+      src="https://www.openstreetmap.org/export/embed.html?bbox=-100.4500%2C25.5500%2C-100.1500%2C25.8000&layer=mapnik&marker=25.6866%2C-100.3161"
+      allowfullscreen loading="lazy">
+    </iframe>
+    <div class="map-pins-list" id="map-pins-list">
+      <span style="font-size:.8rem;color:var(--stone);">Agrega actividades con ubicación para verlas aquí como pins 📍</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════
+     EXPENSE CHART
+═══════════════════════════ -->
+<div class="container page-section">
+  <p class="sec-label">📊 Análisis de gastos</p>
+  <h2 class="sec-title">¿En qué se va el dinero?</h2>
+  <div class="card" style="padding:2rem;">
+    <div class="chart-wrap">
+      <div class="chart-canvas-wrap">
+        <canvas id="expense-chart"></canvas>
+        <div id="chart-center" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;">
+          <div style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;color:var(--ink);" id="chart-total-label">$0</div>
+          <div style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--stone);">Total</div>
+        </div>
+      </div>
+      <div class="chart-legend" id="chart-legend">
+        <div style="font-size:.85rem;color:var(--stone);">Agrega gastos para ver la gráfica 📊</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════
+     BUDGET SUMMARY
+═══════════════════════════ -->
+<div class="budget-section">
+  <div class="budget-inner">
+    <p class="sec-label" style="color:var(--gold);">💰 Resumen financiero</p>
+    <h2 class="sec-title" style="color:var(--cream); margin-bottom:2rem;">Presupuesto total</h2>
+
+    <div class="budget-cols">
+      <div>
+        <div class="budget-col-title ok">✅ Ya pagado</div>
+        <div id="budget-paid-rows"></div>
+      </div>
+      <div>
+        <div class="budget-col-title pend">⏳ Por pagar</div>
+        <div id="budget-pend-rows"></div>
+      </div>
+    </div>
+
+    <div class="budget-grand">
+      <div class="grand-card ok">
+        <div>
+          <div class="grand-lbl ok">PAGADO</div>
+          <div class="grand-amt ok" id="grand-paid">$0</div>
+        </div>
+        <span style="font-size:2rem;">✅</span>
+      </div>
+      <div class="grand-card pend">
+        <div>
+          <div class="grand-lbl pend">POR PAGAR</div>
+          <div class="grand-amt pend" id="grand-pend">$0</div>
+        </div>
+        <span style="font-size:2rem;">⏳</span>
+      </div>
+      <div class="grand-card total">
+        <div>
+          <div class="grand-lbl total">TOTAL DEL VIAJE</div>
+          <div class="grand-amt total" id="grand-total">$0</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:.65rem;color:var(--stone);letter-spacing:.1em;margin-bottom:.3rem;">META</div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:var(--stone);" id="grand-meta">—</div>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top:1.2rem;font-size:.72rem;color:var(--stone);text-align:center;">
+      Los costos marcados "por persona" se multiplican por el número de viajeros configurado. Los costos "total" se usan tal cual.
+    </p>
+  </div>
+</div>
+
+<footer>MONTERREY · NOVIEMBRE 2026 &nbsp;·&nbsp; Planeado con ❤</footer>
+
+<!-- ═══════════════════════════
+     SAVE BAR
+═══════════════════════════ -->
+<div class="save-bar">
+  <span class="save-status" id="save-status">Sin cambios guardados</span>
+  <button class="save-btn" id="save-btn" onclick="saveAll()">
+    <div class="spinner" id="save-spinner"></div>
+    💾 Guardar en Google Sheets
+  </button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+/* ────────────────────────────────
+   CONFIG — URL fija
+──────────────────────────────── */
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbz1fBD8MCwN-F8tMvXT3I167bWkUn33OeGjZK2XmeNAmVUgwFMXRi1toisE9E3KcLYZUA/exec";
+
+/* ────────────────────────────────
+   COUNTDOWN
+──────────────────────────────── */
+function startCountdown() {
+  function update() {
+    // Usa la fecha de salida configurada, o Nov 14 2026 por default
+    const fechaInput = $('cfg-salida')?.value;
+    const target = fechaInput ? new Date(fechaInput) : new Date('2026-11-14');
+    target.setHours(0,0,0,0);
+    const now  = new Date();
+    const diff = target - now;
+    if (diff <= 0) {
+      $('cd-days').textContent  = '¡Ya!';
+      $('cd-hours').textContent = '🎉';
+      $('cd-mins').textContent  = '00';
+      return;
+    }
+    const days  = Math.floor(diff / 86400000);
+    const hours = Math.floor((diff % 86400000) / 3600000);
+    const mins  = Math.floor((diff % 3600000) / 60000);
+    $('cd-days').textContent  = String(days).padStart(2,'0');
+    $('cd-hours').textContent = String(hours).padStart(2,'0');
+    $('cd-mins').textContent  = String(mins).padStart(2,'0');
+  }
+  update();
+  setInterval(update, 30000);
+  // Re-corre cuando cambia la fecha de salida
+  $('cfg-salida')?.addEventListener('change', update);
+}
+
+/* ────────────────────────────────
+   WEATHER — Open-Meteo (gratis, sin API key)
+──────────────────────────────── */
+async function loadWeather() {
+  try {
+    // Coordenadas de Monterrey, N.L.
+    const lat = 25.6866, lon = -100.3161;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=America%2FMonterrey&forecast_days=1`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    const c    = data.current;
+    const d    = data.daily;
+
+    const weatherIcons = {
+      0:'☀️', 1:'🌤', 2:'⛅', 3:'☁️',
+      45:'🌫', 48:'🌫', 51:'🌦', 53:'🌦', 55:'🌧',
+      61:'🌧', 63:'🌧', 65:'🌧', 71:'🌨', 73:'🌨',
+      75:'❄️', 80:'🌦', 81:'🌧', 82:'⛈', 95:'⛈', 99:'⛈'
+    };
+    const weatherDesc = {
+      0:'Despejado', 1:'Mayormente despejado', 2:'Parcialmente nublado', 3:'Nublado',
+      45:'Niebla', 48:'Niebla', 51:'Llovizna ligera', 53:'Llovizna', 55:'Llovizna intensa',
+      61:'Lluvia ligera', 63:'Lluvia', 65:'Lluvia intensa', 71:'Nieve ligera',
+      73:'Nieve', 75:'Nieve intensa', 80:'Chubascos', 81:'Chubascos fuertes',
+      82:'Chubascos violentos', 95:'Tormenta', 99:'Tormenta con granizo'
+    };
+    const code = c.weather_code;
+    $('w-icon').textContent     = weatherIcons[code] || '🌡';
+    $('w-temp').textContent     = Math.round(c.temperature_2m) + '°C';
+    $('w-desc').textContent     = weatherDesc[code] || 'Variable';
+    $('w-feels').textContent    = Math.round(c.apparent_temperature) + '°C';
+    $('w-humidity').textContent = c.relative_humidity_2m + '%';
+    $('w-wind').textContent     = Math.round(c.wind_speed_10m) + ' km/h';
+    $('w-high').textContent     = Math.round(d.temperature_2m_max[0]) + '°C';
+    $('w-low').textContent      = Math.round(d.temperature_2m_min[0]) + '°C';
+  } catch(e) {
+    $('w-desc').textContent = 'Sin conexión al clima';
+  }
+}
+
+/* ────────────────────────────────
+   MAP PINS — OpenStreetMap, sin API key
+──────────────────────────────── */
+function updateMapPins() {
+  const locations = [];
+  document.querySelectorAll('.activity-item').forEach(act => {
+    const name = act.querySelector('.act-name-input')?.value?.trim();
+    const loc  = act.querySelector('.act-input[placeholder*="Dirección"]')?.value?.trim();
+    if (name && loc) locations.push({ name, loc });
+  });
+
+  const pinsList = $('map-pins-list');
+
+  if (locations.length === 0) {
+    pinsList.innerHTML = '<span style="font-size:.8rem;color:var(--stone);">Agrega actividades con ubicación para verlas aquí como pins 📍</span>';
+    $('map-frame').src = 'https://www.openstreetmap.org/export/embed.html?bbox=-100.4500%2C25.5500%2C-100.1500%2C25.8000&layer=mapnik&marker=25.6866%2C-100.3161';
+    return;
+  }
+
+  // Mostrar pins como links que abren en OSM
+  pinsList.innerHTML = locations.map(l =>
+    `<a class="map-pin-tag" href="https://www.openstreetmap.org/search?query=${encodeURIComponent(l.loc+' Monterrey')}" target="_blank" style="text-decoration:none;cursor:pointer;">
+      📍 ${l.name}
+    </a>`
+  ).join('');
+
+  // Centrar mapa en primera ubicación via búsqueda OSM
+  const first = encodeURIComponent(locations[0].loc + ' Monterrey Nuevo Leon');
+  $('map-frame').src = `https://www.openstreetmap.org/export/embed.html?bbox=-100.4500%2C25.5500%2C-100.1500%2C25.8000&layer=mapnik&query=${first}`;
+}
+
+/* ────────────────────────────────
+   EXPENSE CHART — dona con Chart.js
+──────────────────────────────── */
+let expenseChart = null;
+
+function updateChart(paidTotal, pendTotal, dayTotals, flightTotal, transportTotal) {
+  const canvas = $('expense-chart');
+  if (!canvas) return;
+
+  const categories = [];
+  const COLORS = ['#c4603a','#d4a843','#617a55','#4a7fa0','#8b3a1e','#e07b39','#4caf7d','#9e9488'];
+
+  if (flightTotal > 0)    categories.push({ label: '✈ Vuelos',      value: flightTotal,    color: COLORS[0] });
+  if (transportTotal > 0) categories.push({ label: '🚗 Transporte', value: transportTotal, color: COLORS[3] });
+
+  document.querySelectorAll('.day-card').forEach((card, i) => {
+    let sum = 0;
+    const pax = parseInt($('pax-input').value)||1;
+    card.querySelectorAll('.activity-item').forEach(act => {
+      const cost = parseFloat(act.querySelector('.cost-f')?.value)||0;
+      const perP = act.querySelector('.price-per-btn.active')?.textContent==='Por persona';
+      sum += perP ? cost * pax : cost;
+    });
+    if (sum > 0) {
+      const title = card.querySelector('.day-title-input')?.value || `Día ${i+1}`;
+      categories.push({ label: `📅 ${title}`, value: sum, color: COLORS[(i+2) % COLORS.length] });
+    }
+  });
+
+  const grand = categories.reduce((a,c) => a+c.value, 0);
+  $('chart-total-label').textContent = fmt(grand);
+
+  const legend = $('chart-legend');
+  if (categories.length === 0) {
+    legend.innerHTML = '<div style="font-size:.85rem;color:var(--stone);">Agrega gastos para ver la gráfica 📊</div>';
+    if (expenseChart) { expenseChart.destroy(); expenseChart = null; }
+    return;
+  }
+
+  legend.innerHTML = categories.map(c => `
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${c.color}"></div>
+      <span class="legend-label">${c.label}</span>
+      <span class="legend-amount">${fmt(c.value)}<span class="legend-pct">${grand?Math.round(c.value/grand*100):0}%</span></span>
+    </div>`).join('');
+
+  const chartData = {
+    labels: categories.map(c => c.label),
+    datasets: [{ data: categories.map(c => c.value), backgroundColor: categories.map(c => c.color), borderWidth: 0, hoverOffset: 6 }]
+  };
+
+  if (expenseChart) {
+    expenseChart.data = chartData;
+    expenseChart.update();
+  } else {
+    expenseChart = new Chart(canvas, {
+      type: 'doughnut',
+      data: chartData,
+      options: {
+        cutout: '68%',
+        plugins: { legend: { display: false }, tooltip: {
+          callbacks: { label: ctx => ` ${fmt(ctx.parsed)} (${Math.round(ctx.parsed/grand*100)}%)` }
+        }},
+        animation: { animateRotate: true, duration: 600 }
+      }
+    });
+  }
+}
+
+/* ────────────────────────────────
+   HELPERS
+──────────────────────────────── */
+const $ = id => document.getElementById(id);
+const fmt = n => '$' + Math.round(n||0).toLocaleString('es-MX');
+
+function toast(msg, type='info') {
+  const el = $('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  setTimeout(() => el.className = '', 3000);
+}
+
+function toggleStatus(btn) {
+  if (btn.classList.contains('pendiente')) {
+    btn.classList.replace('pendiente','pagado');
+    btn.textContent = '✅ Pagado';
+  } else {
+    btn.classList.replace('pagado','pendiente');
+    btn.textContent = '⏳ Pendiente';
+  }
+  recalc();
+}
+
+/* ────────────────────────────────
+   ACTIVITIES
+──────────────────────────────── */
+const ACT_EMOJIS = ['🍽','🏔','🎶','🛍','🏛','🌮','🍻','🎡','📸','⛰','🎭','🌅','🍦','🛶','🎪','🏨','🎨','🌃'];
+let emojiIdx = 0;
+
+function addActivity(btn) {
+  const body   = btn.closest('.day-body');
+  const list   = body.querySelector('.activities-list');
+  const emoji  = ACT_EMOJIS[emojiIdx++ % ACT_EMOJIS.length];
+  const id     = 'act-' + Date.now();
+
+  const item = document.createElement('div');
+  item.className = 'activity-item';
+  item.id = id;
+  item.innerHTML = `
+    <div class="act-header" onclick="toggleAct(this)">
+      <span class="act-emoji">${emoji}</span>
+      <input class="act-name-input" placeholder="Nombre de la actividad…" oninput="recalc()">
+      <span class="act-quick-price">$0</span>
+      <span class="act-chevron">▾</span>
+    </div>
+    <div class="act-detail">
+      <div class="act-detail-grid">
+        <div class="act-field">
+          <label class="act-field-label">⏰ Horario</label>
+          <input class="act-input" type="time" oninput="recalc()">
+        </div>
+        <div class="act-field">
+          <label class="act-field-label">📍 Ubicación</label>
+          <input class="act-input" placeholder="Dirección o lugar…" oninput="recalc()">
+        </div>
+        <div class="act-field">
+          <label class="act-field-label">💲 Costo</label>
+          <input class="act-input cost-f" type="number" placeholder="0" value="0" oninput="updateActPrice(this); recalc();">
+        </div>
+        <div class="act-field">
+          <label class="act-field-label">👥 Tipo de costo</label>
+          <div class="price-per-toggle">
+            <button class="price-per-btn active" onclick="setPer(this,'persona')">Por persona</button>
+            <button class="price-per-btn" onclick="setPer(this,'total')">Total</button>
+          </div>
+        </div>
+      </div>
+      <div class="act-field" style="margin-bottom:.6rem;">
+        <label class="act-field-label">📝 Descripción / notas</label>
+        <textarea class="act-desc-input" placeholder="Detalles, tips, horarios de cierre, reservación necesaria…"></textarea>
+      </div>
+      <div class="tariff-search-wrap">
+        <label class="act-field-label" style="margin-bottom:.4rem;">🔍 Buscar tarifa actual</label>
+        <div class="tariff-search-row">
+          <input class="act-input tariff-query" placeholder="Ej: Grutas de García Monterrey precio" style="flex:1;">
+          <button class="tariff-btn" onclick="searchTariff(this)">🔎 Buscar</button>
+        </div>
+        <div class="tariff-result"></div>
+      </div>
+      <div class="act-bottom-row">
+        <button class="status-pill pendiente" onclick="toggleStatus(this)">⏳ Pendiente</button>
+        <div style="display:flex;gap:.6rem;">
+          <button class="del-btn" onclick="removeActivity(this)">🗑 Eliminar</button>
+        </div>
+      </div>
+    </div>`;
+  list.appendChild(item);
+  recalc();
+}
+
+function toggleAct(header) {
+  header.closest('.activity-item').classList.toggle('open');
+}
+
+function setPer(btn, val) {
+  const wrap = btn.closest('.price-per-toggle');
+  wrap.querySelectorAll('.price-per-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  recalc();
+}
+
+function updateActPrice(input) {
+  const item  = input.closest('.activity-item');
+  const quick = item.querySelector('.act-quick-price');
+  const cost  = parseFloat(input.value)||0;
+  const pax   = parseInt($('pax-input').value)||1;
+  const perPersona = item.querySelector('.price-per-btn.active')?.textContent === 'Por persona';
+  quick.textContent = fmt(perPersona ? cost * pax : cost);
+}
+
+function removeActivity(btn) {
+  btn.closest('.activity-item').remove();
+  recalc();
+}
+
+/* ── Tariff search — abre Google en nueva pestaña ── */
+function searchTariff(btn) {
+  const wrap  = btn.closest('.tariff-search-wrap');
+  const query = wrap.querySelector('.tariff-query').value.trim();
+  const result= wrap.querySelector('.tariff-result');
+  if (!query) { toast('Escribe el nombre del lugar a buscar','info'); return; }
+
+  // Construye búsqueda optimizada para precios de atracciones
+  const searchQuery = `${query} Monterrey precio entrada tarifa 2026`;
+  const googleUrl   = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
+
+  // Abre Google en nueva pestaña
+  window.open(googleUrl, '_blank');
+
+  // Muestra mensaje de ayuda en la tarjeta
+  result.innerHTML = `
+    <span style="color:var(--sky);font-weight:600;">🔍 Buscando en Google…</span><br>
+    Se abrió una nueva pestaña con resultados para <strong>"${query}"</strong>.<br>
+    <span style="opacity:.8;">Encuentra el precio y escríbelo en el campo de costo arriba.</span>`;
+  result.classList.add('show');
+}
+
+/* ────────────────────────────────
+   DAYS
+──────────────────────────────── */
+let dayCount = 0;
+
+function addDay(data={}) {
+  dayCount++;
+  const wrapper = $('days-wrapper');
+  const card = document.createElement('div');
+  card.className = 'day-card';
+  card.dataset.day = dayCount;
+
+  card.innerHTML = `
+    <div class="day-header" onclick="toggleDay(this)">
+      <div class="day-num">${String(dayCount).padStart(2,'0')}</div>
+      <div class="day-hdr-info">
+        <input class="day-hdr-date-input" placeholder="Fecha (ej: Sábado 8 Nov)…" value="${data.fecha||''}">
+        <input class="day-title-input" placeholder="Nombre del día…" value="${data.titulo||''}">
+      </div>
+      <div class="day-hdr-right">
+        <span class="day-toggle">▾</span>
+      </div>
+    </div>
+    <div class="day-body">
+      <div class="activities-list"></div>
+      <button class="add-act-btn" onclick="addActivity(this)">＋ Agregar actividad</button>
+      <div class="day-total-bar">
+        <span class="day-total-label">TOTAL DEL DÍA</span>
+        <span class="day-total-amount">$0</span>
+      </div>
+    </div>`;
+
+  wrapper.appendChild(card);
+  card.classList.add('open');
+
+  if (data.actividades) {
+    data.actividades.forEach(a => {
+      addActivity(card.querySelector('.add-act-btn'));
+      // populate last added
+      const items = card.querySelectorAll('.activity-item');
+      const last  = items[items.length - 1];
+      if (last) {
+        const inputs = last.querySelectorAll('input,textarea');
+        last.querySelector('.act-name-input').value = a.nombre||'';
+        const costF = last.querySelector('.cost-f');
+        if (costF) costF.value = a.costo||0;
+        // horario, ubicacion, desc
+        const details = last.querySelectorAll('.act-input');
+        details.forEach(inp => {
+          if (inp.type==='time') inp.value = a.horario||'';
+          else if (inp.placeholder?.includes('Dirección')) inp.value = a.ubicacion||'';
+        });
+        const desc = last.querySelector('.act-desc-input');
+        if (desc) desc.value = a.descripcion||'';
+        const status = last.querySelector('.status-pill');
+        if (status && a.status==='pagado') {
+          status.classList.replace('pendiente','pagado');
+          status.textContent = '✅ Pagado';
+        }
+      }
+    });
+  }
+  recalc();
+}
+
+function toggleDay(header) {
+  header.closest('.day-card').classList.toggle('open');
+}
+
+/* ────────────────────────────────
+   TRANSPORT
+──────────────────────────────── */
+const TRANSPORT_ICONS = { uber:'🚗', didi:'🟢', taxi:'🟡', renta:'🚙', otro:'🚌' };
+
+function addTransport(data={}) {
+  const list = $('transport-list');
+  const item = document.createElement('div');
+  item.className = 'transport-item card';
+  const tipo = data.tipo || 'uber';
+  const ico  = TRANSPORT_ICONS[tipo] || '🚗';
+
+  item.innerHTML = `
+    <div class="transport-header">
+      <span class="transport-icon">${ico}</span>
+      <input class="transport-label-input" placeholder="Descripción del trayecto…" value="${data.label||''}">
+      <select class="config-input" style="width:auto;padding:.3rem .6rem;font-size:.8rem;" onchange="this.closest('.transport-item').querySelector('.transport-icon').textContent=({uber:'🚗',didi:'🟢',taxi:'🟡',renta:'🚙',otro:'🚌'}[this.value]||'🚌')">
+        <option value="uber" ${tipo==='uber'?'selected':''}>Uber</option>
+        <option value="didi" ${tipo==='didi'?'selected':''}>Didi</option>
+        <option value="taxi" ${tipo==='taxi'?'selected':''}>Taxi</option>
+        <option value="renta" ${tipo==='renta'?'selected':''}>Auto renta</option>
+        <option value="otro" ${tipo==='otro'?'selected':''}>Otro</option>
+      </select>
+      <button class="del-btn" onclick="this.closest('.transport-item').remove();recalc()">🗑</button>
+    </div>
+    <div class="transport-grid">
+      <div class="transport-field">
+        <span class="transport-field-label">📍 Origen</span>
+        <input class="t-input" placeholder="Desde…" value="${data.origen||''}">
+      </div>
+      <div class="transport-field">
+        <span class="transport-field-label">🎯 Destino</span>
+        <input class="t-input dest-f" placeholder="Hasta…" value="${data.destino||''}">
+      </div>
+      <div class="transport-field">
+        <span class="transport-field-label">📅 Día / hora</span>
+        <input class="t-input" type="datetime-local" value="${data.datetime||''}">
+      </div>
+      <div class="transport-field">
+        <span class="transport-field-label">💲 Costo estimado</span>
+        <input class="t-input cost-f" type="number" placeholder="0" value="${data.costo||0}" oninput="recalc()">
+      </div>
+      <div class="transport-field">
+        <span class="transport-field-label">👥 Tipo costo</span>
+        <div class="price-per-toggle">
+          <button class="price-per-btn active" onclick="setPer(this,'persona')">Por persona</button>
+          <button class="price-per-btn" onclick="setPer(this,'total')">Total</button>
+        </div>
+      </div>
+      <div class="transport-field">
+        <span class="transport-field-label">Estado</span>
+        <button class="status-pill pendiente" onclick="toggleStatus(this)">⏳ Pendiente</button>
+      </div>
+    </div>
+    <a class="map-link" href="#" target="_blank" rel="noopener" onclick="openMaps(this); return false;">🗺 Ver en Google Maps →</a>`;
+
+  list.appendChild(item);
+  recalc();
+}
+
+function openMaps(link) {
+  const item   = link.closest('.transport-item');
+  const origen = item.querySelectorAll('.t-input')[0]?.value?.trim();
+  const dest   = item.querySelector('.dest-f')?.value?.trim();
+  if (origen && dest) {
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen)}&destination=${encodeURIComponent(dest)}`;
+    window.open(url, '_blank', 'noopener');
+  } else {
+    toast('Escribe el origen y destino primero', 'info');
+  }
+}
+
+/* ────────────────────────────────
+   CHECKLISTS
+──────────────────────────────── */
+function addCheckItem(listId, text='', checked=false) {
+  const list = $(listId);
+  const item = document.createElement('div');
+  item.className = 'check-item';
+  item.innerHTML = `
+    <input type="checkbox" ${checked?'checked':''} onchange="this.nextElementSibling.classList.toggle('done',this.checked)">
+    <input class="check-text ${checked?'done':''}" value="${text}" placeholder="Artículo…">
+    <button class="check-del" onclick="this.closest('.check-item').remove()">✕</button>`;
+  list.appendChild(item);
+}
+
+/* ────────────────────────────────
+   CUSTOM SECTIONS
+──────────────────────────────── */
+function addCustomSection(data={}) {
+  const wrapper = $('custom-sections');
+  const sec = document.createElement('div');
+  sec.className = 'card custom-section-card';
+  sec.innerHTML = `
+    <div class="custom-section-header">
+      <input class="custom-section-title-input" placeholder="Título de la sección…" value="${data.titulo||''}">
+      <button class="del-section-btn" onclick="this.closest('.custom-section-card').remove()">🗑 Eliminar</button>
+    </div>
+    <textarea class="custom-section-textarea" placeholder="Escribe aquí el contenido de esta sección…">${data.contenido||''}</textarea>`;
+  wrapper.appendChild(sec);
+}
+
+/* ────────────────────────────────
+   RECALC — totales en vivo
+──────────────────────────────── */
+function recalc() {
+  const pax = parseInt($('pax-input').value)||1;
+  let totalPaid = 0, totalPend = 0;
+
+  const paidRows = [], pendRows = [];
+
+  function addEntry(label, cost, isPaid) {
+    if (isPaid) { totalPaid += cost; paidRows.push({label, cost}); }
+    else        { totalPend += cost; pendRows.push({label, cost}); }
+  }
+
+  // flights
+  ['ida','vuelta'].forEach(dir => {
+    const precio = parseFloat($(`fl-${dir}-precio`)?.value)||0;
+    const total  = precio * pax;
+    const isPaid = $(`fl-${dir}-status`)?.classList.contains('pagado');
+    if (total) addEntry(`✈ Vuelo ${dir} (×${pax})`, total, isPaid);
+  });
+
+  // days
+  document.querySelectorAll('.day-card').forEach(card => {
+    const num   = card.dataset.day;
+    const title = card.querySelector('.day-title-input')?.value || `Día ${num}`;
+    let daySum  = 0;
+
+    card.querySelectorAll('.activity-item').forEach(act => {
+      const cost      = parseFloat(act.querySelector('.cost-f')?.value)||0;
+      const perPerson = act.querySelector('.price-per-btn.active')?.textContent==='Por persona';
+      const realCost  = perPerson ? cost * pax : cost;
+      const isPaid    = act.querySelector('.status-pill')?.classList.contains('pagado');
+      if (realCost) addEntry(`📅 Día ${num} · ${act.querySelector('.act-name-input')?.value||'Actividad'}`, realCost, isPaid);
+      daySum += realCost;
+    });
+
+    const bar = card.querySelector('.day-total-amount');
+    if (bar) bar.textContent = fmt(daySum);
+  });
+
+  // transports
+  document.querySelectorAll('.transport-item').forEach((t,i) => {
+    const cost     = parseFloat(t.querySelector('.cost-f')?.value)||0;
+    const perPerson= t.querySelector('.price-per-btn.active')?.textContent==='Por persona';
+    const realCost = perPerson ? cost * pax : cost;
+    const isPaid   = t.querySelector('.status-pill')?.classList.contains('pagado');
+    const label    = t.querySelector('.transport-label-input')?.value || `Transporte ${i+1}`;
+    if (realCost) addEntry(`🚗 ${label}`, realCost, isPaid);
+  });
+
+  // render budget rows
+  const renderRows = (rows, containerId) => {
+    const el = $(containerId);
+    el.innerHTML = rows.map(r=>`
+      <div class="budget-row">
+        <span class="budget-row-lbl">${r.label}</span>
+        <span class="budget-row-amt">${fmt(r.cost)}</span>
+      </div>`).join('') || '<div style="color:var(--stone);font-size:.82rem;padding:.5rem .9rem;">Sin gastos registrados</div>';
+  };
+  renderRows(paidRows, 'budget-paid-rows');
+  renderRows(pendRows, 'budget-pend-rows');
+
+  const grand = totalPaid + totalPend;
+  $('grand-paid').textContent  = fmt(totalPaid);
+  $('grand-pend').textContent  = fmt(totalPend);
+  $('grand-total').textContent = fmt(grand);
+  $('sum-paid').textContent    = fmt(totalPaid);
+  $('sum-pend').textContent    = fmt(totalPend);
+  $('sum-total').textContent   = fmt(grand);
+
+  const meta = parseFloat($('cfg-budget')?.value)||0;
+  $('grand-meta').textContent = meta ? fmt(meta) : '—';
+
+  // update activity quick prices
+  document.querySelectorAll('.activity-item').forEach(act => {
+    const cost      = parseFloat(act.querySelector('.cost-f')?.value)||0;
+    const perPerson = act.querySelector('.price-per-btn.active')?.textContent==='Por persona';
+    const quick     = act.querySelector('.act-quick-price');
+    if (quick) quick.textContent = fmt(perPerson ? cost*pax : cost);
+  });
+
+  // update chart & map
+  const flightIda    = (parseFloat($('fl-ida-precio')?.value)||0) * pax;
+  const flightVuelta = (parseFloat($('fl-vuelta-precio')?.value)||0) * pax;
+  updateChart(totalPaid, totalPend, 0, flightIda + flightVuelta, 0);
+  updateMapPins();
+}
+
+/* ────────────────────────────────
+   COLLECT DATA
+──────────────────────────────── */
+function collectData() {
+  // days
+  const days = [];
+  document.querySelectorAll('.day-card').forEach(card => {
+    const acts = [];
+    card.querySelectorAll('.activity-item').forEach(act => {
+      const inputs = act.querySelectorAll('.act-input');
+      let horario='', ubicacion='', desc='';
+      inputs.forEach(inp => {
+        if (inp.type==='time') horario = inp.value;
+        else if (inp.placeholder?.includes('Dirección')) ubicacion = inp.value;
+      });
+      const descEl = act.querySelector('.act-desc-input');
+      if (descEl) desc = descEl.value;
+      acts.push({
+        nombre: act.querySelector('.act-name-input')?.value||'',
+        horario, ubicacion,
+        costo: act.querySelector('.cost-f')?.value||0,
+        porPersona: act.querySelector('.price-per-btn.active')?.textContent==='Por persona',
+        descripcion: desc,
+        status: act.querySelector('.status-pill')?.classList.contains('pagado')?'pagado':'pendiente'
+      });
+    });
+    days.push({
+      numero: card.dataset.day,
+      fecha: card.querySelector('.day-hdr-date-input')?.value||'',
+      titulo: card.querySelector('.day-title-input')?.value||'',
+      actividades: acts
+    });
+  });
+
+  // transports
+  const transports = [];
+  document.querySelectorAll('.transport-item').forEach(t => {
+    const tInputs = t.querySelectorAll('.t-input');
+    transports.push({
+      tipo: t.querySelector('select')?.value||'',
+      label: t.querySelector('.transport-label-input')?.value||'',
+      origen: tInputs[0]?.value||'',
+      destino: tInputs[1]?.value||'',
+      costo: t.querySelector('.cost-f')?.value||0,
+      status: t.querySelector('.status-pill')?.classList.contains('pagado')?'pagado':'pendiente'
+    });
+  });
+
+  // checklists
+  const getList = id => {
+    const items = [];
+    document.querySelectorAll(`#${id} .check-item`).forEach(ci => {
+      items.push({ text: ci.querySelector('.check-text')?.value||'', checked: ci.querySelector('input[type=checkbox]')?.checked||false });
+    });
+    return items;
+  };
+
+  // custom sections
+  const customSections = [];
+  document.querySelectorAll('.custom-section-card').forEach(s => {
+    customSections.push({
+      titulo: s.querySelector('.custom-section-title-input')?.value||'',
+      contenido: s.querySelector('.custom-section-textarea')?.value||''
+    });
+  });
+
+  return {
+    meta: {
+      heroFechas: $('hero-dates')?.value||'',
+      heroTagline: $('hero-tagline')?.value||'',
+      pax: $('pax-input')?.value||2,
+      destino: $('cfg-destino')?.value||'',
+      fechaSalida: $('cfg-salida')?.value||'',
+      fechaRegreso: $('cfg-regreso')?.value||'',
+      moneda: $('cfg-moneda')?.value||'MXN',
+      presupuestoMeta: $('cfg-budget')?.value||0,
+      hotel: $('cfg-hotel')?.value||'',
+      notas: $('notes-field')?.value||''
+    },
+    vuelos: {
+      idaOrigen: $('fl-origen')?.value||'', idaDestino: $('fl-destino')?.value||'',
+      idaFecha: $('fl-ida-fecha')?.value||'', idaHora: $('fl-ida-hora')?.value||'',
+      idaAerolinea: $('fl-ida-aerolinea')?.value||'', idaNumero: $('fl-ida-numero')?.value||'',
+      idaEscala: $('fl-ida-escala')?.value||'', idaPrecio: $('fl-ida-precio')?.value||0,
+      idaStatus: $('fl-ida-status')?.classList.contains('pagado')?'pagado':'pendiente',
+      vueltaOrigen: $('fl-v-origen')?.value||'', vueltaDestino: $('fl-v-destino')?.value||'',
+      vueltaFecha: $('fl-vuelta-fecha')?.value||'', vueltaHora: $('fl-vuelta-hora')?.value||'',
+      vueltaAerolinea: $('fl-vuelta-aerolinea')?.value||'', vueltaNumero: $('fl-vuelta-numero')?.value||'',
+      vueltaEscala: $('fl-vuelta-escala')?.value||'', vueltaPrecio: $('fl-vuelta-precio')?.value||0,
+      vueltaStatus: $('fl-vuelta-status')?.classList.contains('pagado')?'pagado':'pendiente'
+    },
+    days, transports,
+    listaCompras: getList('list-compras'),
+    listaIndispensables: getList('list-indispensables'),
+    customSections
+  };
+}
+
+/* ────────────────────────────────
+   SAVE
+──────────────────────────────── */
+async function saveAll() {
+  if (SHEET_URL === "AQUI_VA_TU_URL_DEL_APPS_SCRIPT") {
+    toast('⚠️ Configura primero tu URL de Google Apps Script (ver INSTRUCCIONES.md)', 'error');
+    return;
+  }
+  const btn = $('save-btn');
+  const spinner = $('save-spinner');
+  btn.disabled = true;
+  spinner.classList.add('show');
+  $('save-status').textContent = 'Guardando…';
+
+  try {
+    const data = collectData();
+    await fetch(SHEET_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save', payload: data })
+    });
+    $('save-status').textContent = 'Guardado · ' + new Date().toLocaleTimeString('es-MX');
+    toast('✅ Datos guardados en Google Sheets','success');
+  } catch(e) {
+    toast('❌ Error al guardar. Revisa la URL del script.','error');
+    $('save-status').textContent = 'Error al guardar';
+  }
+  btn.disabled = false;
+  spinner.classList.remove('show');
+}
+
+/* ────────────────────────────────
+   LOAD
+──────────────────────────────── */
+async function loadAll() {
+  $('save-status').textContent = 'Cargando…';
+  toast('☁️ Cargando datos…', 'info');
+  loadViaScript();
+}
+
+function loadViaScript() {
+  window._sheetCallback = function(data) {
+    try {
+      if (data && (data.meta || data.ok === false)) {
+        if (data.meta) {
+          applyData(data);
+          $('save-status').textContent = 'Datos cargados · ' + new Date().toLocaleTimeString('es-MX');
+          toast('☁️ Datos cargados correctamente', 'success');
+        } else {
+          $('save-status').textContent = 'Sin datos previos';
+          toast('Sin datos guardados aún', 'info');
+        }
+      }
+    } catch(err) {
+      $('save-status').textContent = 'Error al procesar datos';
+      toast('❌ Error al procesar datos', 'error');
+    } finally {
+      document.getElementById('_jsonp_script')?.remove();
+      delete window._sheetCallback;
+    }
+  };
+
+  // Limpiar script anterior si existe
+  document.getElementById('_jsonp_script')?.remove();
+
+  const s  = document.createElement('script');
+  s.id     = '_jsonp_script';
+  s.onerror = () => {
+    s.remove();
+    delete window._sheetCallback;
+    $('save-status').textContent = 'Error al cargar';
+    toast('❌ Error de conexión. Intenta de nuevo.', 'error');
+  };
+  s.src = SHEET_URL + '?action=load&callback=_sheetCallback&t=' + Date.now();
+  document.body.appendChild(s);
+
+  // Timeout de 10 segundos
+  setTimeout(() => {
+    if (document.getElementById('_jsonp_script')) {
+      document.getElementById('_jsonp_script').remove();
+      delete window._sheetCallback;
+      $('save-status').textContent = 'Tiempo de espera agotado';
+      toast('⏱ Sin respuesta. Intenta de nuevo.', 'error');
+    }
+  }, 10000);
+}
+
+function applyData(d) {
+  if (!d) return;
+  try {
+    const m = d.meta || {};
+    if ($('hero-dates'))   $('hero-dates').value   = m.heroFechas||'';
+    if ($('hero-tagline')) $('hero-tagline').value  = m.heroTagline||'';
+    if ($('pax-input'))    $('pax-input').value     = m.pax||2;
+    if ($('cfg-destino'))  $('cfg-destino').value   = m.destino||'';
+    if ($('cfg-salida'))   $('cfg-salida').value    = m.fechaSalida||'';
+    if ($('cfg-regreso'))  $('cfg-regreso').value   = m.fechaRegreso||'';
+    if ($('cfg-moneda'))   $('cfg-moneda').value    = m.moneda||'MXN';
+    if ($('cfg-budget'))   $('cfg-budget').value    = m.presupuestoMeta||0;
+    if ($('cfg-hotel'))    $('cfg-hotel').value     = m.hotel||'';
+    if ($('notes-field'))  $('notes-field').value   = m.notas||'';
+
+    // Refrescar cuenta regresiva con fecha cargada
+    if (m.fechaSalida) $('cfg-salida').dispatchEvent(new Event('change'));
+
+    const v = d.vuelos||{};
+    const fld = (id, val) => { const el=$(id); if(el) el.value=val||''; };
+    fld('fl-origen',v.idaOrigen); fld('fl-destino',v.idaDestino);
+    fld('fl-ida-fecha',v.idaFecha); fld('fl-ida-hora',v.idaHora);
+    fld('fl-ida-aerolinea',v.idaAerolinea); fld('fl-ida-numero',v.idaNumero);
+    fld('fl-ida-escala',v.idaEscala); fld('fl-ida-precio',v.idaPrecio);
+    fld('fl-v-origen',v.vueltaOrigen); fld('fl-v-destino',v.vueltaDestino);
+    fld('fl-vuelta-fecha',v.vueltaFecha); fld('fl-vuelta-hora',v.vueltaHora);
+    fld('fl-vuelta-aerolinea',v.vueltaAerolinea); fld('fl-vuelta-numero',v.vueltaNumero);
+    fld('fl-vuelta-escala',v.vueltaEscala); fld('fl-vuelta-precio',v.vueltaPrecio);
+
+    const setStatus = (id, status) => {
+      const el = $(id); if (!el) return;
+      if (status==='pagado') { el.classList.replace('pendiente','pagado'); el.textContent='✅ Pagado'; }
+      else { el.classList.replace('pagado','pendiente'); el.textContent='⏳ Pendiente'; }
+    };
+    setStatus('fl-ida-status', v.idaStatus);
+    setStatus('fl-vuelta-status', v.vueltaStatus);
+
+    // Reconstruir días
+    const daysWrapper = $('days-wrapper');
+    if (daysWrapper) { daysWrapper.innerHTML = ''; dayCount = 0; }
+    (d.days||[]).forEach(day => addDay(day));
+
+    // Reconstruir transportes
+    const tList = $('transport-list');
+    if (tList) tList.innerHTML = '';
+    (d.transports||[]).forEach(t => addTransport(t));
+
+    // Reconstruir listas
+    const lc = $('list-compras');
+    if (lc) lc.innerHTML = '';
+    (d.listaCompras||[]).forEach(i => addCheckItem('list-compras', i.text, i.checked));
+
+    const li = $('list-indispensables');
+    if (li) li.innerHTML = '';
+    (d.listaIndispensables||[]).forEach(i => addCheckItem('list-indispensables', i.text, i.checked));
+
+    // Reconstruir secciones custom
+    const cs = $('custom-sections');
+    if (cs) cs.innerHTML = '';
+    (d.customSections||[]).forEach(s => addCustomSection(s));
+
+    recalc();
+  } catch(err) {
+    console.error('applyData error:', err);
+    throw err; // re-lanza para que _sheetCallback lo atrape
+  }
+}
+
+/* ────────────────────────────────
+   INIT
+──────────────────────────────── */
+(function init() {
+  // default days
+  addDay({ fecha: 'Viernes 7 Nov', titulo: 'Llegada y primer bocado regio' });
+  addDay({ fecha: 'Sábado 8 Nov',  titulo: 'Cerro de la Silla y casco histórico' });
+  addDay({ fecha: 'Domingo 9 Nov', titulo: 'Grutas de García y carne asada' });
+  addDay({ fecha: 'Lunes 10 Nov',  titulo: 'Compras y regreso a casa' });
+
+  // default checklist items
+  ['Protector solar','Medicamentos','Adaptador de corriente','Efectivo MXN'].forEach(t => addCheckItem('list-compras',t));
+  ['Pasaporte/INE','Vuelos descargados','Seguro de viaje','Cargadores','Ropa de capas'].forEach(t => addCheckItem('list-indispensables',t));
+
+  // close all days except first
+  document.querySelectorAll('.day-card').forEach((c,i) => { if(i!==0) c.classList.remove('open'); });
+
+  recalc();
+
+  // auto-recalc on any input
+  document.addEventListener('input', recalc);
+  document.addEventListener('change', recalc);
+
+  // Countdown y clima
+  startCountdown();
+  loadWeather();
+
+  // Auto-cargar datos al entrar — espera 1.5s para que la página termine de cargar
+  setTimeout(() => {
+    $('save-status').textContent = 'Cargando datos…';
+    loadViaScript();
+  }, 1500);
+})();
+</script>
+</body>
+</html>
